@@ -21,6 +21,9 @@ class ImageSerializer(serializers.ModelSerializer):
 
 
 class AlbumSerializer(serializers.ModelSerializer):
+
+    is_default = serializers.BooleanField(required=True)
+
     class Meta:
         model = core_models.Album
         fields = '__all__'

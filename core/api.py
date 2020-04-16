@@ -22,30 +22,9 @@ from .utils import getOrCreateSettingsObject
 from .serializers import (AlbumSerializer, ImageSerializer, SettingsSerializer,
                           LoginSerializer, RegisterSerializer, UserSerializer)
 from . import models as core_models
+from .consumerActions import updateDefaultAlbum, updateGalleryTimer
 
-from .consumers import ChatConsumer
-
-
-from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-
-
-async def updateDefaultAlbum(albumPK):
-    channel_layer = get_channel_layer()
-    group_name = "album_view"
-    content = {
-        # This "type" passes through to the front-end to facilitate
-        # our Redux events.
-        "type": "UPDATE_DEFAULT_ALBUM",
-        "payload": {"album_id": albumPK},
-    }
-
-    await channel_layer.group_send(group_name, {
-        # This "type" defines which handler on the Consumer gets
-        # called.
-        "type": "notify",
-        "content": content,
-    })
 
 
 @api_view(['GET'])
@@ -65,19 +44,47 @@ def ChangeDefaultAlbum(request, newAlbumPK):
     albumObject.save()
     albumData = AlbumSerializer(albumObject).data
 
-    # TODO: since the default image as being changed,
-    # fire a signal to refresh the UI and pick up the new
-    # settings.
-    # Tip: You can keep another table called Notifications
-    # or Changes that gets a value incremented and updated.
-    # The UI will be constantly looking at this table to
-    # know if there is any new changes. Once it finds that
-    # the value has been chanaged from what it has, it refreshes
-    # the UI automatically
-
+    # Notify connected clients
     async_to_sync(updateDefaultAlbum)(newAlbumPK)
 
     return Response(data=albumData)
+
+
+@api_view(['POST'])
+@permission_classes((permissions.IsAuthenticated, ))
+def IncreaseSpeedAPI(request):
+
+    settingsObject = getOrCreateSettingsObject()
+
+    if(settingsObject.max_show_seconds >= 15):
+        return Response(data={"error": "Slide speed can not be increased further."}, status=HTTPStatus.BAD_REQUEST)
+
+    settingsObject.max_show_seconds = settingsObject.max_show_seconds + 1
+    settingsObject.save()
+
+    async_to_sync(updateGalleryTimer)(settingsObject.max_show_seconds)
+
+    settingsData = SettingsSerializer(settingsObject, many=False).data
+
+    return Response(data=settingsData)
+
+
+@api_view(['POST'])
+@permission_classes((permissions.IsAuthenticated, ))
+def DecreaseSpeedAPI(request):
+
+    settingsObject = getOrCreateSettingsObject()
+    if(settingsObject.max_show_seconds - 1 <= 0):
+        return Response(data="Slide speed can not be decreased", status=HTTPStatus.BAD_REQUEST)
+
+    settingsObject.max_show_seconds = settingsObject.max_show_seconds - 1
+    settingsObject.save()
+
+    async_to_sync(updateGalleryTimer)(settingsObject.max_show_seconds)
+
+    settingsData = SettingsSerializer(settingsObject, many=False).data
+
+    return Response(data=settingsData)
 
 
 @api_view(['POST'])
@@ -94,18 +101,29 @@ def SleepClientAPI(request):
 def ChanageImageTiming(request):
 
     newSeconds = request.data.get("seconds", None)
-    if newSeconds == None:
-        return Response(data=["seconds is required"], status=status.HTTP_400_BAD_REQUEST)
+    if newSeconds == None or newSeconds < 1 or newSeconds > 15:
+        return Response(data=["Slide speed (seconds) is required and must not be more than 15 and less than 1"], status=status.HTTP_400_BAD_REQUEST)
 
     settingsObject = getOrCreateSettingsObject()
     settingsObject.max_show_seconds = newSeconds
     settingsObject.save()
 
-    # TODO: Perform UI update logic
+    async_to_sync(updateGalleryTimer)(newSeconds)
 
     settingsData = SettingsSerializer(settingsObject, many=False).data
 
     return Response(data=settingsData)
+
+
+@api_view(['GET'])
+def GetDefaultAlbum(request):
+    albumsObjects = core_models.Album.objects.get(is_default=True)
+    albumsData = AlbumSerializer(albumsObjects).data
+
+    settingsObject = getOrCreateSettingsObject()
+    albumsData['viewTimeout'] = settingsObject.max_show_seconds * 1000
+
+    return Response(data=albumsData)
 
 
 class ImageAPI(generics.ListCreateAPIView):
@@ -121,7 +139,15 @@ class ImageAPI(generics.ListCreateAPIView):
         return Response(data=imageData)
 
     def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
+
+        album = core_models.Album.objects.get(pk=request.data.get('album'))
+        insertResponse = self.create(request, *args, **kwargs)
+
+        if(album.is_default):
+            # Notify connected clients
+            async_to_sync(updateDefaultAlbum)(request.data.get('album'))
+
+        return insertResponse
 
     def get_queryset(self):
         return core_models.Album.objects.all()
@@ -138,7 +164,23 @@ class OneAlbumAPI(generics.RetrieveUpdateDestroyAPIView):
     #     return self.retrieve(request, *args, **kwargs)
 
     def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
+        albumPK = kwargs['pk']
+        album = core_models.Album.objects.get(pk=albumPK)
+
+        title = request.data.get('title')
+        description = request.data.get('description')
+        is_default = request.data.get('is_default', album.is_default)
+
+        album.title = title
+        album.description = description
+        album.is_default = is_default
+        album.save()
+
+        if(album.is_default):
+            # Notify connected clients
+            async_to_sync(updateDefaultAlbum)(albumPK)
+
+        return Response()
 
     def patch(self, request, *args, **kwargs):
         return self.partial_update(request, *args, **kwargs)
@@ -170,14 +212,25 @@ class OneImageAPI(generics.RetrieveUpdateDestroyAPIView):
     ]
 
     def put(self, request, *args, **kwargs):
+
         return self.update(request, *args, **kwargs)
 
     def patch(self, request, *args, **kwargs):
         return self.partial_update(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
-        imageObject = core_models.Image.objects.get(pk=kwargs['pk'])
-        imageObject.imageFile.delete()
+
+        try:
+            imageObject = core_models.Image.objects.get(pk=kwargs['pk'])
+            imageObject.imageFile.delete()
+            album = core_models.Album.objects.get(pk=imageObject.album.pk)
+
+            if(album.is_default):
+                # Notify connected clients
+                async_to_sync(updateDefaultAlbum)(album.pk)
+        except (core_models.Album.DoesNotExist, core_models.Image.DoesNotExist):
+            pass
+
         return self.destroy(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):

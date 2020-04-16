@@ -1,0 +1,134 @@
+.container {
+  display: flex;
+  height: 100vh;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.overlay {
+  display: flex;
+  justify-content: center;
+  background-color: #000000ab;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  margin: auto;
+}
+
+.login-form {
+  width: 80%;
+  color: white;
+  height: 350px;
+  margin: auto;
+  /* display: flex; */
+  flex-direction: column;
+}
+
+.login-form div {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+}
+
+.login-form input {
+  width: 100%;
+  margin-top: 10px;
+  height: 30px;
+  color: rgb(6, 6, 80);
+  border-color: rgb(6, 6, 80);
+  padding-left: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.login-form label {
+  text-align: left;
+}
+
+.login-form input:hover,
+.login-form input:active {
+  border-color: rgb(35, 35, 129);
+}
+
+.button {
+  height: 40px;
+  width: 200px;
+  border: 1px solid;
+  color: white;
+  cursor: pointer;
+}
+
+.button-primary {
+  background-color: tomato;
+  border-color: tomato;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.password-forgot-label {
+  margin-top: 15px;
+  text-align: center !important;
+}
+
+.notification {
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.notification-success {
+  background-color: rgb(23, 117, 23);
+}
+
+.notification-danger {
+  background-color: tomato;
+}
+
+.gallery-box {
+  background-color: white;
+  position: fixed;
+  width: 100%;
+}
+
+.gallery-controls {
+  width: 65%;
+  background-color: rgb(255, 255, 255);
+  margin: auto;
+  display: flex;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  justify-content: space-between;
+}
+
+.hide {
+  display: none;
+}
+
+.timer-speed {
+  margin: 10px;
+}
+
+@media (max-width: 1441px) {
+  .login-form {
+    width: 20%;
+  }
+}
+
+.gallery-active {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .login-form {
+    width: 55%;
+  }
+}
+
+@media (max-width: 468px) {
+  .login-form {
+    width: 80%;
+  }
+}

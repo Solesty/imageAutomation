@@ -16,15 +16,15 @@ from django.contrib.auth.models import (
 
 class Settings(models.Model):
     max_show_seconds = models.IntegerField(
-        _("Maximum seconds to show each iamge"), default=30)
-    
+        _("Maximum seconds to show each iamge"), default=5)
+
 
 class Album(models.Model):
     title = models.CharField(max_length=100, blank=False, null=False)
     description = models.TextField(_("Description"), blank=True, null=False)
 
     """ Specifies if this album should be the default album to served to the home page """
-    is_default = models.BooleanField(default=False)
+    is_default = models.BooleanField()
 
     def ___str__(self):
         return self.name
