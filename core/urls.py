@@ -28,15 +28,14 @@ urlpatterns = [
     path('album', core_api.AlbumAPI.as_view()),
 
     path('album/default/public', core_api.GetDefaultAlbum),
-    
+
     path('album/<int:pk>', core_api.OneAlbumAPI.as_view()),
     path('image', core_api.ImageAPI.as_view()),
     path('image/<int:pk>', core_api.OneImageAPI.as_view()),
 
     path('album/change/default/<int:newAlbumPK>', core_api.ChangeDefaultAlbum),
     path('settings/image/maxseconds', core_api.ChanageImageTiming),
-    path('settings/sleep', core_api.SleepClientAPI),
-    path('settings/wake', core_api.SleepClientAPI),
+    path('settings/mode/<str:mode>', core_api.ControlModeAPI),
     path('settings/speed/increase', core_api.IncreaseSpeedAPI),
     path('settings/speed/decrease', core_api.DecreaseSpeedAPI),
 ]

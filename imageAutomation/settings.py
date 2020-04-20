@@ -15,7 +15,7 @@ SECRET_KEY = 'uw*9%7qs@*2jix=t*2+@9z$o3!**s(sp$e1m62ic-k4e^9%$s1'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -59,6 +59,7 @@ REST_FRAMEWORK = {
 
 STATIC_URL = '/static/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/media/'
 
 REST_KNOX = {

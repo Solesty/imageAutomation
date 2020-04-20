@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.contrib.auth import authenticate
 
 from . import models as core_models
+from .utils import getOrCreateSettingsObject
 
 
 class SettingsSerializer(serializers.ModelSerializer):
@@ -40,15 +41,18 @@ class AlbumSerializer(serializers.ModelSerializer):
 
         title = validated_data['title']
         description = validated_data.get('description', '')
+        is_default = validated_data.get('is_default', False)
 
         if core_models.Album.objects.filter(
             title__iexact=title
         ).count() > 0:
             raise serializers.ValidationError(
-                ["An album with such title exist"])
+                {"message": "An album with such title exist"})
+
         albumObject = core_models.Album(
             title=title,
-            description=description
+            description=description,
+            is_default=is_default
         )
         albumObject.save()
 
@@ -64,12 +68,17 @@ class AlbumSerializer(serializers.ModelSerializer):
             album=instance
         )
         imageData = ImageSerializer(albumImages, many=True).data
+        
+        settingsObject = getOrCreateSettingsObject()
+        viewTimeout = settingsObject.max_show_seconds
+        
         return {
             "id": instance.id,
             "title": instance.title,
             "description": instance.description,
             "is_default": instance.is_default,
             "images": imageData,
+            "viewTimeout": viewTimeout,
         }
 
 

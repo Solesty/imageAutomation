@@ -22,7 +22,7 @@ from .utils import getOrCreateSettingsObject
 from .serializers import (AlbumSerializer, ImageSerializer, SettingsSerializer,
                           LoginSerializer, RegisterSerializer, UserSerializer)
 from . import models as core_models
-from .consumerActions import updateDefaultAlbum, updateGalleryTimer
+from .consumerActions import updateDefaultAlbum, updateGalleryTimer, updateGalleryMode
 
 from asgiref.sync import async_to_sync
 
@@ -87,11 +87,13 @@ def DecreaseSpeedAPI(request):
     return Response(data=settingsData)
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes((permissions.IsAuthenticated, ))
-def SleepClientAPI(request):
+def ControlModeAPI(request, mode):
 
-    raise ValueError("Not Yet Implemeted")
+    async_to_sync(updateGalleryMode)(mode)
+
+    return Response()
 
     # return Response()
 
@@ -117,7 +119,12 @@ def ChanageImageTiming(request):
 
 @api_view(['GET'])
 def GetDefaultAlbum(request):
-    albumsObjects = core_models.Album.objects.get(is_default=True)
+    try:
+        albumsObjects = core_models.Album.objects.get(is_default=True)
+    except core_models.Album.DoesNotExist:
+        # most likely the server is busy trying to update the default album
+        return Response(data=["Unable to get the default album try again"], status=status.HTTP_400_BAD_REQUEST)
+
     albumsData = AlbumSerializer(albumsObjects).data
 
     settingsObject = getOrCreateSettingsObject()

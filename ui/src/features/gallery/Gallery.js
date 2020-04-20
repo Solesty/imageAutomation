@@ -3,8 +3,8 @@ import styles from '../styles.css';
 
 import React, { Component } from 'react'
 import { connect } from 'react-redux';
-import { fetchDefaultAlbum } from './galleryActions';
-import { changeViewTimeout } from './gallerySlice';
+import { fetchDefaultAlbum, } from './galleryActions';
+import { changeViewTimeout, changeGalleryMode } from './gallerySlice';
 
 import backgrpundImage from '../backgrpundImage.jpg';
 import backgrpundImage2 from '../backgroundImage2.jpg';
@@ -23,6 +23,7 @@ class Gallery extends Component {
         this.startButtonRef = React.createRef();
         this.state = {
             isFull: false,
+            mode: "wake",
             currentImage: backgrpundImage,
             paused: false,
             stopped: false,
@@ -45,7 +46,7 @@ class Gallery extends Component {
 
     stopSlide = (callback) => {
         clearInterval(this.state.timerID);
-        console.log("stopped  " + this.state.timerID);
+        // console.log("stopped  " + this.state.timerID);
         this.setState({
             timerID: "",
             stopped: true,
@@ -74,12 +75,19 @@ class Gallery extends Component {
         });
     }
 
+    _changeMode = (mode = this.state.mode) => {
+        this.setState({
+            mode,
+            paused: mode == "pause" ? true : mode == "play" ? false : this.state.paused
+        }, () => this._loopSlide());
+    }
+
     _loopSlide = (newSeconds = this.state.slideTimeout) => {
-        console.log(this.state.paused + " " + this.state.stopped);
+        // console.log(this.state.paused + " " + this.state.stopped);
 
         if (this.state.paused && !this.state.stopped) {
             this.playSlide();
-            console.log("Gallery already being played..");
+            // console.log("Gallery already being played..");
             return;
         }
 
@@ -91,22 +99,22 @@ class Gallery extends Component {
             this.state['stopped'] = false;
             this.state['timerID'] = setInterval(() => {
                 if (!this.state.paused && !this.state.stopped) {
-                    console.log("Still paying");
+                    // console.log("Still paying");
                     this._changeGalleryView();
                 } else {
-                    console.log("Gallery Paused");
+                    // console.log("Gallery Paused");
                     return;
                 }
             }, newSeconds);
-            console.log("started" + this.state.timerID + ` in these conditions paused? ${this.state.paused} and timerID ${this.state.timerID} and seconds ` + newSeconds);
+            // console.log("started" + this.state.timerID + ` in these conditions paused? ${this.state.paused} and timerID ${this.state.timerID} and seconds ` + newSeconds);
 
         } else {
-            console.log("Can not play");
+            // console.log("Can not play");
         }
     }
 
     playSlide = () => {
-        console.log("Paused before playing " + this.state.paused + " stopped => " + this.state.stopped);
+        // console.log("Paused before playing " + this.state.paused + " stopped => " + this.state.stopped);
         this.setState({
             // check the paused state to decide on what to do,
             // this can be either the server sent soemthing and we need to restart
@@ -116,12 +124,19 @@ class Gallery extends Component {
     }
 
     changeTimeout = (newSeconds) => {
-        // console.log("newSeconds " + newSeconds);
+        // // console.log("newSeconds " + newSeconds);
         this.stopSlide(() =>
             this.setState({
                 paused: false,
                 slideTimeout: newSeconds
             }, () => this._loopSlide(newSeconds)));
+    }
+
+    changeMode = (mode) => {
+        this.stopSlide(() =>
+            this.setState({
+                mode: mode,
+            }, () => this._changeMode(mode)));
     }
 
     handlePause = () => {
@@ -157,10 +172,10 @@ class Gallery extends Component {
             <div className="gallery-box" >
                 <div className="gallery-controls" >
                     <button className="hide" onClick={() => this.playSlide()} ref={this.startButtonRef} >Start</button>
-                    <button className="button button-primary pause-button" onClick={() => this.decreaseSpeed()} >- Speed</button>
+                    {/* <button className="button button-primary pause-button" onClick={() => this.decreaseSpeed()} >- Speed</button> */}
                     <button className="button button-primary fulscreen-button" onClick={() => this.handleFullScreenRequest()} >Go Full Screen</button>
-                    <button className="button button-primary pause-button" onClick={() => this.handlePause()} > {this.state.paused ? "Play" : "Pause"} </button>
-                    <button className="button button-primary pause-button" onClick={() => this.inCreaseSpeed()} >+ Speed</button>
+                    {/* <button className="button button-primary pause-button" onClick={() => this.handlePause()} > {this.state.paused ? "Play" : "Pause"} </button>
+                    <button className="button button-primary pause-button" onClick={() => this.inCreaseSpeed()} >+ Speed</button> */}
                     <label className="timer-speed" > {this.state.slideTimeout / 1000}x </label>
                 </div>
                 <div ref={this.galleryRef} className="container gallery" >
@@ -186,25 +201,28 @@ class Gallery extends Component {
     }
 
     componentDidCatch(error, info) {
-        console.log(error);
-        console.log(info);
+        // console.log(error);
+        // console.log(info);
     }
 
     handleReceivedSignal = (data) => {
-        console.log(data);
+        // console.log(data);
         let result = JSON.parse(data);
-        console.log(result);
+        // console.log(result);
         if (result.type == "UPDATE_DEFAULT_ALBUM") {
             this.props.fetchDefaultAlbum();
         } else if (result.type == "UPDATE_GALLERY_TIMER") {
             this.changeTimeout(result.payload.new_seconds * 1000);
             store.dispatch(changeViewTimeout(result.payload.new_seconds * 1000));
+        } else if (result.type == "UPDATE_GALLERY_MODE") {
+            this.changeMode(result.payload.mode);
+            store.dispatch(changeGalleryMode(result.payload.mode));
         }
     }
 }
 
 const mapStateToProps = (state) => {
-    console.log(state);
+    // console.log(state);
     return {
         defaultAlbum: state.gallerySlice.album,
         viewTimeout: state.gallerySlice.viewTimeout == 0 ? state.gallerySlice.album.viewTimeout : state.gallerySlice.viewTimeout

@@ -7,10 +7,14 @@ export const gallerySlice = createSlice({
             viewTimeout: 1000
         },
         albumData: [],
+        mode: "wake",
         autoPlayVideo: false,
         viewTimeout: 0, // in seconds 
     },
     reducers: {
+        changeGalleryMode: (state, action) => {
+            state.mode = action.payload;
+        },
         changeViewTimeout: (state, action) => {
             state.viewTimeout = action.payload;
         },
@@ -26,7 +30,7 @@ export const gallerySlice = createSlice({
 
 
 
-export const { changeViewTimeout, changeAlbum, loadAlbumData } = gallerySlice.actions;
+export const { changeViewTimeout, changeAlbum, loadAlbumData, changeGalleryMode } = gallerySlice.actions;
 
 // The function below is called a thunk and allows us to perform async logic. It
 // can be dispatched like a regular action: `dispatch(incrementAsync(10))`. This
